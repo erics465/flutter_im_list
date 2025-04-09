@@ -39,6 +39,8 @@ class DefaultMessageWidget extends StatelessWidget {
 
   final HiSelectionArea? hiSelectionArea;
 
+  final Function? setStateRef;
+
   const DefaultMessageWidget(
       {required GlobalKey key,
       required this.message,
@@ -50,7 +52,8 @@ class DefaultMessageWidget extends StatelessWidget {
       this.avatarSize = 40,
       this.onBubbleTap,
       this.onBubbleLongPress,
-      this.hiSelectionArea})
+      this.hiSelectionArea,
+      this.setStateRef})
       : super(key: key);
 
   double get contentMargin => avatarSize + 10;
@@ -116,7 +119,13 @@ class DefaultMessageWidget extends StatelessWidget {
               nip: BubbleNip.leftTop,
               color: backgroundColor ?? const Color.fromRGBO(233, 232, 252, 10),
               alignment: Alignment.topLeft,
-              child: _buildContentText(TextAlign.left, context)),
+              child: switch (message.mediaType) {
+                MediaType.text => _buildContentText(TextAlign.left, context),
+                
+                // TODO: Handle this case.
+                MediaType.survey => _buildContentSurvey(TextAlign.left, context),
+                _ => _buildContentText(TextAlign.left, context) //TODO
+              }),
         ),
       ],
     );
@@ -161,6 +170,54 @@ class DefaultMessageWidget extends StatelessWidget {
             ? onBubbleLongPress!(message, context)
             : null,
         child: text);
+  }
+
+  Widget _buildContentSurvey(TextAlign textAlign, BuildContext context) {
+    int radioOption = 0;
+
+    Widget survey = Column(
+      children: [
+        Text("Survey title", style: Theme.of(context).textTheme.bodyMedium),
+        ListView.builder(
+          shrinkWrap: true,
+          itemCount: 3,
+          itemBuilder: (BuildContext context, int index) {
+            return Row(
+              spacing: 3,
+              children: [
+                Radio(value: 0,
+                  groupValue: radioOption,
+                  onChanged: (value) {
+                    if (setStateRef != null) {
+                      setStateRef!(() {
+                        radioOption = value!;
+                      });
+                    }
+                  }),
+                Expanded(
+                  child: Text("Option $index"),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(onPressed: () => {}, icon: const Icon(Icons.remove_circle)),
+                    IconButton(onPressed: () => {}, icon: const Icon(Icons.settings))
+                  ]
+                )
+              ],
+            );
+          }
+        )
+      ],
+    );
+
+    return InkWell(
+        onTap: () =>
+            onBubbleTap != null ? onBubbleTap!(message, context) : null,
+        onLongPress: () => onBubbleLongPress != null
+            ? onBubbleLongPress!(message, context)
+            : null,
+        child: survey);
   }
 
   Widget _buildCreatedTime() {

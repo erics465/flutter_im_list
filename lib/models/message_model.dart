@@ -2,13 +2,14 @@ import 'package:flutter/widgets.dart';
 
 enum OwnerType { receiver, sender }
 
-OwnerType _of(String name) {
+OwnerType _ownerTypeOf(String name) {
   if (name == OwnerType.receiver.toString()) {
     return OwnerType.receiver;
   } else {
     return OwnerType.sender;
   }
 }
+enum MediaType { text, survey, image }
 
 class MessageModel {
   /// Provides id
@@ -21,6 +22,9 @@ class MessageModel {
   /// Used to handle in which side of the screen the message
   /// will be displayed.
   final OwnerType ownerType;
+
+  //Type of message
+  final MediaType mediaType;
 
   /// Name to be displayed with the initials.
   /// egg.: Higor Lapa will be H
@@ -41,6 +45,7 @@ class MessageModel {
   MessageModel(
       {this.id,
       required this.ownerType,
+      this.mediaType = MediaType.text,
       this.ownerName,
       this.avatar,
       required this.content,
@@ -51,7 +56,8 @@ class MessageModel {
         id: json["id"],
         content: json["content"],
         createdAt: json["createdAt"],
-        ownerType: _of(json["ownerType"]),
+        ownerType: _ownerTypeOf(json["ownerType"]),
+        mediaType: json["mediaType"] ?? MediaType.text,
         avatar: json["avatar"],
         ownerName: json["ownerName"],
       );
@@ -61,6 +67,7 @@ class MessageModel {
         'content': content,
         'createdAt': createdAt,
         'ownerName': ownerName,
+        'mediaType': mediaType.toString(),
         //数据库存储不支持复合类型
         'ownerType': ownerType.toString(),
         'avatar': avatar

@@ -58,6 +58,7 @@ class _ChatListState extends State<ChatList> {
                     messageWidget: messageWidgetBuilder,
                     onBubbleTap: widget.onBubbleTap,
                     onBubbleLongPress: widget.onBubbleLongPress,
+                    setStateRef: setState,
                   );
                 },
               )
