@@ -93,7 +93,7 @@ class DefaultMessageWidget extends StatelessWidget {
         : _buildSender(context);
     return Column(
       children: [
-        if (message.showCreatedTime) _buildCreatedTime(),
+        //if (message.showCreatedTime) _buildCreatedTime(),
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: content,

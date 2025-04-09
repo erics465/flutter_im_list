@@ -22,7 +22,7 @@ class ChatController implements IChatController {
       required this.scrollController,
       required this.timePellet,
       this.messageWidgetBuilder}) {
-    for (var message in initialMessageList.reversed) {
+    for (var message in initialMessageList) {
       inflateMessage(message);
     }
   }
