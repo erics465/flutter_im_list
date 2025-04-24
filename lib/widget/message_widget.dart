@@ -2,7 +2,8 @@ import 'package:bubble/bubble.dart';
 import 'package:flutter/material.dart';
 
 import '../models/message_model.dart';
-import '../util/wechat_date_format.dart';
+
+//TODO: Future performance optimization: Move stateless messages (e.g. text) to different Widget class than stateful messages (e.g. survey)
 
 typedef MessageWidgetBuilder = Widget Function(MessageModel message);
 typedef OnBubbleClick = void Function(
@@ -12,7 +13,7 @@ typedef OnBubbleClick = void Function(
 typedef HiSelectionArea = Widget Function(
     {required Text child, required MessageModel message});
 
-class DefaultMessageWidget extends StatelessWidget {
+class DefaultMessageWidget extends StatefulWidget {
   final MessageModel message;
 
   /// the font-family of the [content].
@@ -56,25 +57,33 @@ class DefaultMessageWidget extends StatelessWidget {
       this.setStateRef})
       : super(key: key);
 
-  double get contentMargin => avatarSize + 10;
+  @override
+  State<DefaultMessageWidget> createState() => _DefaultMessageWidgetState();
+}
+
+class _DefaultMessageWidgetState extends State<DefaultMessageWidget> {
+
+  double get contentMargin => widget.avatarSize + 10;
+
+  int radioOption = 0;
 
   String get senderInitials {
-    if (message.ownerName == null) return "";
-    List<String> chars = message.ownerName!.split(" ");
+    if (widget.message.ownerName == null) return "";
+    List<String> chars = widget.message.ownerName!.split(" ");
     if (chars.length > 1) {
       return chars[0];
     } else {
-      return message.ownerName![0];
+      return widget.message.ownerName![0];
     }
   }
 
   Widget get _buildCircleAvatar {
-    var child = message.avatar is String
+    var child = widget.message.avatar is String
         ? ClipOval(
             child: Image.network(
-              message.avatar!,
-              height: avatarSize,
-              width: avatarSize,
+              widget.message.avatar!,
+              height: widget.avatarSize,
+              width: widget.avatarSize,
             ),
           )
         : CircleAvatar(
@@ -88,12 +97,22 @@ class DefaultMessageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (messageWidget != null) {
-      return messageWidget!(message);
+    if (widget.messageWidget != null) {
+      return widget.messageWidget!(widget.message);
     }
-    Widget content = message.ownerType == OwnerType.receiver
-        ? _buildReceiver(context)
-        : _buildSender(context);
+
+    Widget content;
+    if (widget.message.ownerType == OwnerType.system) {
+      if (widget.message.mediaType == MediaType.text) {
+        content = _parseSystemMessage(context);
+      } else {
+        content = _buildContentLive(context);
+      }
+    } else {
+      content = widget.message.ownerType == OwnerType.receiver
+          ? _buildReceiver(context)
+          : _buildSender(context);
+    }
     return Column(
       children: [
         //if (message.showCreatedTime) _buildCreatedTime(),
@@ -117,15 +136,10 @@ class DefaultMessageWidget extends StatelessWidget {
               margin: BubbleEdges.fromLTRB(10, 0, contentMargin, 0),
               stick: true,
               nip: BubbleNip.leftTop,
-              color: backgroundColor ?? const Color.fromRGBO(233, 232, 252, 10),
+              color: widget.backgroundColor ?? const Color.fromRGBO(233, 232, 252, 10),
               alignment: Alignment.topLeft,
-              child: switch (message.mediaType) {
-                MediaType.text => _buildContentText(TextAlign.left, context),
-                
-                // TODO: Handle this case.
-                MediaType.survey => _buildContentSurvey(TextAlign.left, context),
-                _ => _buildContentText(TextAlign.left, context) //TODO
-              }),
+              child: _buildMessage(TextAlign.left, context)
+          ),
         ),
       ],
     );
@@ -142,42 +156,75 @@ class DefaultMessageWidget extends StatelessWidget {
               margin: BubbleEdges.fromLTRB(contentMargin, 0, 10, 0),
               stick: true,
               nip: BubbleNip.rightTop,
-              color: backgroundColor ?? Colors.white,
+              color: widget.backgroundColor ?? Colors.white,
               alignment: Alignment.topRight,
-              child: _buildContentText(TextAlign.left, context)),
+              child: _buildMessage(TextAlign.right, context)),
         ),
         _buildCircleAvatar
       ],
     );
   }
 
+  Widget _buildMessage(TextAlign align, BuildContext context) {
+    return switch (widget.message.mediaType) {
+      MediaType.text => _buildContentText(align, context),
+      MediaType.survey => _buildContentSurvey(align, context),
+      MediaType.image => _buildContentImage(align, context),
+      MediaType.location => _buildContentLocation(align, context),
+      _ => _buildContentText(align, context) //TODO
+    };
+  }
+
   Widget _buildContentText(TextAlign align, BuildContext context) {
     Widget text = Text(
-      message.content,
+      widget.message.content,
       textAlign: align,
       style: TextStyle(
-          fontSize: fontSize,
-          color: textColor ?? Colors.black,
-          fontFamily: fontFamily),
+          fontSize: widget.fontSize,
+          color: widget.textColor ?? Colors.black,
+          fontFamily: widget.fontFamily),
     );
-    if (hiSelectionArea != null) {
-      text = hiSelectionArea!.call(child: text as Text, message: message);
+    if (widget.hiSelectionArea != null) {
+      text = widget.hiSelectionArea!.call(child: text as Text, message: widget.message);
     }
     return InkWell(
         onTap: () =>
-            onBubbleTap != null ? onBubbleTap!(message, context) : null,
-        onLongPress: () => onBubbleLongPress != null
-            ? onBubbleLongPress!(message, context)
+            widget.onBubbleTap != null ? widget.onBubbleTap!(widget.message, context) : null,
+        onLongPress: () => widget.onBubbleLongPress != null
+            ? widget.onBubbleLongPress!(widget.message, context)
+            : null,
+        child: text);
+  }
+
+  Widget _buildContentImage(TextAlign align, BuildContext context) {
+    Widget text = Image.network("https://picsum.photos/200/200");
+    return InkWell(
+        onTap: () =>
+            widget.onBubbleTap != null ? widget.onBubbleTap!(widget.message, context) : null,
+        onLongPress: () => widget.onBubbleLongPress != null
+            ? widget.onBubbleLongPress!(widget.message, context)
+            : null,
+        child: text);
+  }
+
+  Widget _buildContentLocation(TextAlign align, BuildContext context) {
+    Widget text = Container(
+      height: 300,
+      child: const Text("Map goes here")
+    );
+    return InkWell(
+        onTap: () =>
+            widget.onBubbleTap != null ? widget.onBubbleTap!(widget.message, context) : null,
+        onLongPress: () => widget.onBubbleLongPress != null
+            ? widget.onBubbleLongPress!(widget.message, context)
             : null,
         child: text);
   }
 
   Widget _buildContentSurvey(TextAlign textAlign, BuildContext context) {
-    int radioOption = 0;
-
     Widget survey = Column(
       children: [
-        Text("Survey title", style: Theme.of(context).textTheme.bodyMedium),
+        Text("Survey title", style: Theme.of(context).textTheme.headlineSmall),
         ListView.builder(
           shrinkWrap: true,
           itemCount: 3,
@@ -185,14 +232,12 @@ class DefaultMessageWidget extends StatelessWidget {
             return Row(
               spacing: 3,
               children: [
-                Radio(value: 0,
+                Radio(value: index,
                   groupValue: radioOption,
                   onChanged: (value) {
-                    if (setStateRef != null) {
-                      setStateRef!(() {
-                        radioOption = value!;
-                      });
-                    }
+                    setState(() {
+                      radioOption = value!;
+                    });
                   }),
                 Expanded(
                   child: Text("Option $index"),
@@ -200,8 +245,8 @@ class DefaultMessageWidget extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(onPressed: () => {}, icon: const Icon(Icons.remove_circle)),
-                    IconButton(onPressed: () => {}, icon: const Icon(Icons.settings))
+                    IconButton(onPressed: () => {}, icon: const Icon(Icons.remove)),
+                    IconButton(onPressed: () => {}, icon: const Icon(Icons.edit))
                   ]
                 )
               ],
@@ -213,18 +258,28 @@ class DefaultMessageWidget extends StatelessWidget {
 
     return InkWell(
         onTap: () =>
-            onBubbleTap != null ? onBubbleTap!(message, context) : null,
-        onLongPress: () => onBubbleLongPress != null
-            ? onBubbleLongPress!(message, context)
+            widget.onBubbleTap != null ? widget.onBubbleTap!(widget.message, context) : null,
+        onLongPress: () => widget.onBubbleLongPress != null
+            ? widget.onBubbleLongPress!(widget.message, context)
             : null,
         child: survey);
   }
 
-  Widget _buildCreatedTime() {
-    String showT = WechatDateFormat.format(message.createdAt, dayOnly: false);
+  Widget _parseSystemMessage(BuildContext context) {
+    return _buildSystemMessage(widget.message.content);
+  }
+
+  Widget _buildSystemMessage(String text) {
     return Container(
       padding: const EdgeInsets.only(top: 10),
-      child: Text(showT),
+      child: Text(text),
+    );
+  }
+
+  Widget _buildContentLive(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 10),
+      child: const Text("Live safety information goes here"),
     );
   }
 }

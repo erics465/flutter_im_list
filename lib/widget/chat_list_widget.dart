@@ -77,7 +77,6 @@ class _ChatListState extends State<ChatList> {
 
   @override
   Widget build(context) {
-    //配合shrinkWrap: true使用，解决数据少的时候数据底部对齐的问题
     return Align(
       alignment: Alignment.topCenter,
       child: _chatStreamBuilder,

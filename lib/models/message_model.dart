@@ -1,15 +1,17 @@
 import 'package:flutter/widgets.dart';
 
-enum OwnerType { receiver, sender }
+enum OwnerType { receiver, sender, system }
 
 OwnerType _ownerTypeOf(String name) {
   if (name == OwnerType.receiver.toString()) {
     return OwnerType.receiver;
-  } else {
+  } else if (name == OwnerType.sender.toString()) {
     return OwnerType.sender;
+  } else {
+    return OwnerType.system;
   }
 }
-enum MediaType { text, survey, image }
+enum MediaType { text, survey, image, location, live }
 
 class MessageModel {
   /// Provides id
