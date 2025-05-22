@@ -70,7 +70,6 @@ class MessageModel {
         'createdAt': createdAt,
         'ownerName': ownerName,
         'mediaType': mediaType.toString(),
-        //数据库存储不支持复合类型
         'ownerType': ownerType.toString(),
         'avatar': avatar
       };
